@@ -9,12 +9,15 @@
     "128": "assets/icons/icon128.png"
   },
 
-  "permissions": ["storage", "scripting"],
-  "host_permissions": ["https://obs.sabis.sakarya.edu.tr/*"],
+  "permissions": ["storage", "scripting", "tabs", "offscreen", "contextMenus"],
+  "host_permissions": [
+    "https://obs.sabis.sakarya.edu.tr/*",
+    "https://*.sabis.sakarya.edu.tr/*"
+  ],
 
-  "background": { "service_worker": "src/content/background.js" },
+  "background": { "service_worker": "src/content/background.js", "type": "module" },
 
-  "action": { "default_popup": "src/popup/popup.html" },
+  "action": { "default_popup": "src/homework/popup/popup.html" },
 
   "content_scripts": [
     {
@@ -26,6 +29,30 @@
       "matches": ["https://obs.sabis.sakarya.edu.tr/Transkript*"],
       "js": ["src/content/transkript.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.sabis.sakarya.edu.tr/*"],
+      "js": ["src/homework/content/content-script.js"],
+      "run_at": "document_idle",
+      "all_frames": true
     }
-  ]
+  ],
+  "options_ui": {
+    "page": "src/homework/options/settings.html",
+    "open_in_tab": true
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["src/homework/shared/collector.js"],
+      "matches": ["https://*.sabis.sakarya.edu.tr/*"]
+    }
+  ],
+  "commands": {
+    "open-homework-popup": {
+      "suggested_key": {
+        "default": "Alt+H"
+      },
+      "description": "Odev takip penceresini ac"
+    }
+  }
 }

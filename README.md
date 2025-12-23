@@ -1,86 +1,83 @@
-# SABİS GPA Hesaplayıcı (SABIS-Note-Assistant) 🚀
+# SABIS Ogrenci Yardim Eklentisi (SABIS-Note-Assistant)
 
-Sakarya Üniversitesi öğrencileri için geliştirilmiş bu Chrome / Edge uzantısı,
-**SABİS** “Ders” ve “Transkript” ekranlarında
-
-* **Eksik not ekleyerek** “ne olurdu?” senaryoları çalıştırmanıza  
-* **AKTS kredilerini güncelleyip** dönem / genel GPA’yı anında görmenize  
-* Tüm bunları **renkli, canlı geri bildirim** ile takip etmenize olanak tanır.
+Sakarya Universitesi ogrencileri icin gelistirilmis Chrome/Edge uzantisi.
+Not asistani, odev takibi ve kisa sinav takibini tek eklentide birlestirir.
 
 ---
 
-## Kurulum (Geliştirici Mod)
+## Ozellikler
 
-1. Depoyu ZIP olarak indirin veya `git clone` yapın.  
-2. Tarayıcıda `chrome://extensions` → **Geliştirici Modu**nu açın.  
-3. **“Paketlenmemiş uzantı yükle”** → proje kök klasörünü seçin  
-   (içinde `manifest.json` bulunur).  
-4. Mavi uzantı simgesi göründüğünde kurulum tamamdır.
+### 1) Not Asistani (Ders / Transkript)
+- Ders sayfalarinda bos not hucrelerine giris alani ekler.
+- Girilen notlarla ders ortalamasini canli hesaplar.
+- Transkript ekraninda AKTS ve GPA hesaplamalarini gunceller.
+
+### 2) Odev Takibi
+- SABIS duyurularindan odevleri toplar.
+- Odevleri Yaklasan / Uzun Sureli / Suresi Gecen olarak gruplar.
+- Popup icinden tek tikla yenileme yapar.
+
+### 3) Kisa Sinav Takibi
+- `esinav.sabis.sakarya.edu.tr` sinav listesini ceker.
+- Kisa sinavlari Yaklasan / Uzun Sureli / Suresi Gecen olarak filtreler.
+- "Katil" butonu sinav katilim sayfasini acar.
+
+### 4) Tek Popup, Cok Mod
+- Popup icinde Odevler / Kisa Sinavlar sekmeleri vardir.
+- Not asistanini popup icinden ac/kapat yapabilirsin.
 
 ---
 
-## Özellikler
+## Kurulum (Gelistirici Mod)
 
-| # | Açıklama |
-|---|----------|
-| **1 – Dinamik Not Kutuları** | Notu girilmemiş hücrelerde otomatik **textbox** (0 – 100). |
-| **2 – Giriş Doğrulama** | 0-100 dışı veya harf/özel karakter girişi engellenir. |
-| **3 – Canlı GPA Hesabı** | Her değişiklikte **dönem ve genel** GPA yeniden hesaplanır.<br>• **Yeşil ≥ 75** • **Mavi 55–74** • **Kırmızı < 55** |
-| **4 – AKTS Düzenle Toggle** | Kart başlığındaki **❌ / ✅ AKTS Düzenle** <br>→ AKTS hücrelerinde − / ＋ butonları & doğrudan sayı girişi<br>→ Tek tıkla orijinal değere sıfırlama |
-| **5 – “Ortalamaya Girmez”** | Yıldız `*` işaretli dersler (STAJ I, II …) otomatik **hesap dışı** tutulur. |
+1) Depoyu indirin veya `git clone` yapin.
+2) Tarayicida `chrome://extensions` acin.
+3) Gelistirici Modu acin.
+4) "Paketlenmemis uzanti yukle" ile proje kok klasorunu secin.
+
+Not: `.pem` ve `.crx` dosyalari gerekmez.
 
 ---
 
-## Önce / Sonra
+## Kullanim
 
-| Önce | Sonra |
+- Eklenti ikonuna tiklayinca popup acilir.
+- Popup icinde "Odevler" ve "Kisa Sinavlar" sekmeleri vardir.
+- "SABIS'i ac" ana sayfayi acar.
+- "Ayarlar" ile esik gun degerlerini degistirebilirsin.
+- Not asistanini popup icinden aktif/pasif yapabilirsin.
+
+---
+
+## Ekran Goruntuleri
+
+| Once | Sonra |
 |:--:|:--:|
-| ![Önce 1](assets/images/before1.png) | ![Sonra 1](assets/images/after1.png) |
-| ![Önce 2](assets/images/before2.png) | ![Sonra 2](assets/images/after2.png) |
+| ![Once 1](assets/images/before1.png) | ![Sonra 1](assets/images/after1.png) |
+| ![Once 2](assets/images/before2.png) | ![Sonra 2](assets/images/after2.png) |
 
 ---
 
-## Klasör Yapısı
+## Dizin Yapisi (Ozet)
 
-SABIS-Note-Assistant/
-├─ manifest.json               # uzantı bildirimi  (kökte)            
-├─ README.md
-│
-├─ assets/
-│   ├─ icons/                  # uzantı ikonları
-│   │   ├─ icon16.png
-│   │   ├─ icon48.png
-│   │   └─ icon128.png
-│   └─ images/                 # ekran görüntüleri
-│       ├─ before1.png
-│       ├─ after1.png
-│       ├─ before2.png
-│       └─ after2.png
-│
-├─ src/                        # kaynak kodlar
-│   ├─ content/
-│   │   └─ content.js          # /Ders sayfası
-        └─ transkript.js       # /Transkript sayfası
-        └─ background.js       # service-worker
-│   └─ popup/
-│       ├─ popup.html
-│       ├─ popup.js
-│
-├─ AverageCalculator.crx
-└─ AverageCalculator.pem
-
-
-## Katkı & Destek
-
-* ⭐ Projeyi beğendiyseniz **Star** verin  
-* 🔀 **Fork + PR** göndererek yeni özellik ekleyin  
-* 🐞 Sorun ve önerilerinizi **Issues** bölümünde paylaşın  
-
-Her geri bildirim bizim için çok değerli!
+- `manifest.json`
+- `assets/`
+  - `icons/` (uzanti ikonlari)
+  - `images/` (ekran goruntuleri)
+- `src/content/` (not asistani + background)
+- `src/homework/` (odev + sinav takip popup, offscreen, collector)
 
 ---
 
-## İletişim
+## Katki ve Destek
 
-**E-posta:** ozdemirosmantahir@gmail.com
-**E-posta:** suleymansametkaya@gmail.com
+- Projeyi begenirsen star verebilirsin.
+- Yeni ozellikler icin PR gonderebilirsin.
+- Hata/istekler icin issue acabilirsin.
+
+---
+
+## Iletisim
+
+- ozdemirosmantahir@gmail.com
+- suleymansametkaya@gmail.com

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SABIS Homework Assistant Ayarlar</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: #0f172a;
+        color: #f8fafc;
+      }
+      body {
+        margin: 0 auto;
+        max-width: 560px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.4rem;
+      }
+      form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      input[type="number"] {
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid #334155;
+        background: #1e293b;
+        color: inherit;
+      }
+      button {
+        width: fit-content;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        background: #2563eb;
+        color: #e2e8f0;
+        font-weight: 600;
+      }
+      #status {
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Ayarlar</h1>
+    <form id="settings-form">
+      <label>
+        Yaklasan teslimat esigi (gun)
+        <input
+          type="number"
+          id="due-soon-days"
+          min="0"
+          max="30"
+          required
+        />
+      </label>
+      <label>
+        Uzun sureli kabul edilen minimum gun
+        <input
+          type="number"
+          id="long-term-days"
+          min="0"
+          max="180"
+          required
+        />
+      </label>
+      <button type="submit">Kaydet</button>
+    </form>
+    <div id="status"></div>
+    <script type="module" src="settings.js"></script>
+  </body>
+</html>
