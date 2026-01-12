@@ -1,11 +1,13 @@
 const DEFAULT_SETTINGS = {
   dueSoonDays: 3,
-  longTermDays: 10
+  longTermDays: 10,
+  showCalculatorAnnounced: false
 };
 
 const form = document.querySelector("#settings-form");
 const dueSoonInput = document.querySelector("#due-soon-days");
 const longTermInput = document.querySelector("#long-term-days");
+const showCalculatorAnnouncedInput = document.querySelector("#show-calculator-announced");
 const statusEl = document.querySelector("#status");
 
 async function loadSettings() {
@@ -13,6 +15,7 @@ async function loadSettings() {
   const settings = { ...DEFAULT_SETTINGS, ...stored };
   dueSoonInput.value = settings.dueSoonDays;
   longTermInput.value = settings.longTermDays;
+  showCalculatorAnnouncedInput.checked = settings.showCalculatorAnnounced;
 }
 
 function showStatus(message, type = "info") {
@@ -25,24 +28,25 @@ form.addEventListener("submit", async (event) => {
 
   const dueSoonDays = Number(dueSoonInput.value);
   const longTermDays = Number(longTermInput.value);
+  const showCalculatorAnnounced = showCalculatorAnnouncedInput.checked;
 
   if (Number.isNaN(dueSoonDays) || Number.isNaN(longTermDays)) {
-    showStatus("Gecerli bir sayi girin.", "error");
+    showStatus("Geçerli bir sayı girin.", "error");
     return;
   }
 
   if (longTermDays <= dueSoonDays) {
     showStatus(
-      "Uzun sureli gun sayisi, yaklasan teslimat esiginden buyuk olmali.",
+      "Uzun süreli gün sayısı, yaklaşan teslimat eşiğinden büyük olmalı.",
       "error"
     );
     return;
   }
 
-  await chrome.storage.sync.set({ dueSoonDays, longTermDays });
+  await chrome.storage.sync.set({ dueSoonDays, longTermDays, showCalculatorAnnounced });
   showStatus("Ayarlar kaydedildi.", "success");
 });
 
 loadSettings().catch((error) => {
-  showStatus(`Ayarlar yuklenemedi: ${error.message}`, "error");
+  showStatus(`Ayarlar yüklenemedi: ${error.message}`, "error");
 });

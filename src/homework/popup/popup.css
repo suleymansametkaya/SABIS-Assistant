@@ -78,11 +78,11 @@ header h1 {
   transition: 0.2s ease;
 }
 
-.toggle input:checked + .slider {
+.toggle input:checked+.slider {
   background: #22c55e;
 }
 
-.toggle input:checked + .slider::before {
+.toggle input:checked+.slider::before {
   transform: translateX(16px);
 }
 
@@ -107,6 +107,67 @@ header h1 {
   background: #1a2230;
   border-radius: 8px;
   font-size: 0.95rem;
+}
+
+#filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.search-container {
+  position: relative;
+  flex: 1;
+}
+
+#search-input {
+  width: 100%;
+  padding: 8px 10px 8px 32px;
+  border: none;
+  background: #182235;
+  color: #f8fafc;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+
+#search-input:focus {
+  outline: none;
+  background: #1f2a3a;
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+#sort-select {
+  padding: 8px 10px;
+  border: none;
+  background: #182235;
+  color: #dbeafe;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  outline: none;
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+
+#sort-select:hover {
+  background: #1f2a3a;
+}
+
+#sort-select:focus {
+  box-shadow: 0 0 0 2px #3b82f6;
 }
 
 #mode-tabs {
@@ -189,8 +250,14 @@ main {
   gap: 8px;
 }
 
-.category.empty .category-body::before {
-  content: "Bu kategoride odev bulunamadi.";
+#assignments-container .category.empty .category-body::before {
+  content: "Bu kategoride ödev bulunamadı.";
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+#exams-container .category.empty .category-body::before {
+  content: "Bu kategoride sınav bulunamadı.";
   font-size: 0.9rem;
   color: #94a3b8;
 }
@@ -268,4 +335,36 @@ footer a {
 
 footer a:hover {
   text-decoration: underline;
+}
+
+.assignment-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.calendar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: #16a34a;
+  color: #f8fafc;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 500;
+  gap: 4px;
+  transition: background 0.2s ease;
+}
+
+.calendar-btn:hover {
+  background: #15803d;
+}
+
+.exam-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
 }

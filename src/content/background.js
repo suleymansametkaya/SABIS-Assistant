@@ -8,6 +8,14 @@ const HOMEWORK_POPUP_URL = "src/homework/popup/popup.html";
 const HOMEWORK_MENU_ID = "open-homework-popup";
 const SABIS_EXAM_URL = "https://esinav.sabis.sakarya.edu.tr/Session/Exam";
 
+const CACHE_KEY_ASSIGNMENTS = "cachedAssignments";
+const CACHE_KEY_EXAMS = "cachedExams";
+const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 saat
+
+const AUTO_UPDATE_ALARM_NAME = "sabis-auto-update";
+const AUTO_UPDATE_INTERVAL_MINUTES = 15; // Her 15 dakikada bir güncelle
+const LAST_AUTO_UPDATE_KEY = "lastAutoUpdate";
+
 const COLLECTOR_TIMEOUT_MS = 15000;
 const COLLECTOR_RETRY_DELAY_MS = 300;
 const ANNOUNCEMENT_PATH_CANDIDATES = [
@@ -154,7 +162,7 @@ async function fetchAnnouncementComponent(baseUrl, token) {
 
 async function ensureOffscreenDocument() {
   if (!chrome.offscreen?.createDocument) {
-    throw new Error("Offscreen dokuman desteklenmiyor.");
+    throw new Error("Offscreen doküman desteklenmiyor.");
   }
 
   if (chrome.offscreen.hasDocument) {
@@ -168,7 +176,7 @@ async function ensureOffscreenDocument() {
     url: chrome.runtime.getURL("src/homework/offscreen/offscreen.html"),
     reasons: ["DOM_PARSER"],
     justification:
-      "SABIS sayfasini arka planda gorunur sekme acmadan parse edebilmek."
+      "SABİS sayfasını arka planda görünür sekme açmadan ayrıştırabilmek."
   });
 }
 
@@ -248,7 +256,7 @@ async function waitForTabReady(tabId, timeoutMs = 15000) {
 
     chrome.tabs.onUpdated.addListener(onUpdated);
     chrome.tabs.onRemoved.addListener(onRemoved);
-  }).catch(() => {});
+  }).catch(() => { });
 }
 
 async function findReadySabisTab() {
@@ -257,7 +265,7 @@ async function findReadySabisTab() {
     return null;
   }
 
-  await waitForTabReady(tab.id).catch(() => {});
+  await waitForTabReady(tab.id).catch(() => { });
   return tab;
 }
 
@@ -270,7 +278,7 @@ async function injectContentScript(tabId) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(
-      `Icerik betigi enjekte edilemedi. Sekmeyi yenileyip tekrar deneyin. Hata: ${message}`
+      `İçerik betiği enjekte edilemedi. Sekmeyi yenileyip tekrar deneyin. Hata: ${message}`
     );
   }
 }
@@ -310,7 +318,7 @@ async function collectWithRetries(tabId) {
 
     if (result.code === "SEND_MESSAGE_FAILED") {
       throw new Error(
-        `Icerik betigi iletisimi kurulamadi. Hata: ${result.error}`
+        `İçerik betiği iletişimi kurulamadı. Hata: ${result.error}`
       );
     }
 
@@ -326,11 +334,11 @@ async function collectWithRetries(tabId) {
 
   if (lastError === COLLECTOR_NOT_READY) {
     throw new Error(
-      "Icerik betigi hazir degil. Lutfen SABIS sekmesinin tam yuklendiginden emin olun."
+      "İçerik betiği hazır değil. Lütfen SABİS sekmesinin tam yüklendiğinden emin olun."
     );
   }
 
-  throw new Error(`Icerik betigi veri donduremedi. Hata: ${lastError}`);
+  throw new Error(`İçerik betiği veri döndüremedi. Hata: ${lastError}`);
 }
 
 async function fetchAssignmentsFromTab(tab) {
@@ -456,7 +464,7 @@ async function fetchAssignmentsDirectly() {
 
     if (isLikelyLoggedOut(html, sourceUrl)) {
       throw new Error(
-        "Oturum acik degil. SABIS'te giris yapip tekrar deneyin."
+        "Oturum açık değil. SABİS'te giriş yapıp tekrar deneyin."
       );
     }
 
@@ -470,7 +478,7 @@ async function fetchAssignmentsDirectly() {
       const componentData = await fetchAnnouncementComponent(sourceUrl, token);
       if (isLikelyLoggedOut(componentData.html, componentData.sourceUrl)) {
         throw new Error(
-          "Oturum acik degil. SABIS'te giris yapip tekrar deneyin."
+          "Oturum açık değil. SABİS'te giriş yapıp tekrar deneyin."
         );
       }
       payload = await parseAssignmentsFromHtml(
@@ -489,7 +497,7 @@ async function fetchAssignmentsDirectly() {
       triedUrls.add(announcementData.sourceUrl);
       if (isLikelyLoggedOut(announcementData.html, announcementData.sourceUrl)) {
         throw new Error(
-          "Oturum acik degil. SABIS'te giris yapip tekrar deneyin."
+          "Oturum açık değil. SABİS'te giriş yapıp tekrar deneyin."
         );
       }
       payload = await parseAssignmentsFromHtml(
@@ -508,7 +516,7 @@ async function fetchAssignmentsDirectly() {
         triedUrls.add(candidateData.sourceUrl);
         if (isLikelyLoggedOut(candidateData.html, candidateData.sourceUrl)) {
           throw new Error(
-            "Oturum acik degil. SABIS'te giris yapip tekrar deneyin."
+            "Oturum açık değil. SABİS'te giriş yapıp tekrar deneyin."
           );
         }
         payload = await parseAssignmentsFromHtml(
@@ -524,7 +532,7 @@ async function fetchAssignmentsDirectly() {
     return payload;
   } catch (error) {
     const message = toErrorMessage(error);
-    throw new Error(`SABIS sayfasindan veri cekilemedi. Hata: ${message}`);
+    throw new Error(`SABİS sayfasından veri çekilemedi. Hata: ${message}`);
   }
 }
 
@@ -534,14 +542,14 @@ async function fetchExamsDirectly() {
 
     if (isLikelyLoggedOut(html, sourceUrl)) {
       throw new Error(
-        "Oturum acik degil. SABIS'te giris yapip tekrar deneyin."
+        "Oturum açık değil. SABİS'te giriş yapıp tekrar deneyin."
       );
     }
 
     return await parseExamsFromHtml(html, sourceUrl);
   } catch (error) {
     const message = toErrorMessage(error);
-    throw new Error(`Sinav sayfasi cekilemedi. Hata: ${message}`);
+    throw new Error(`Sınav sayfası çekilemedi. Hata: ${message}`);
   }
 }
 
@@ -559,24 +567,49 @@ async function collectWithExistingTab() {
   }
 }
 
-async function handleFetchAssignmentsRequest() {
-  const existingResult = await collectWithExistingTab();
-  if (existingResult.ok && existingResult.payload.assignments.length) {
-    return existingResult.payload;
+async function getCachedData(key) {
+  try {
+    const result = await chrome.storage.local.get(key);
+    const cached = result[key];
+    if (!cached) {
+      return null;
+    }
+    // Önbellek çok eskiyse null döndür
+    const age = Date.now() - (cached.cachedAt || 0);
+    if (age > CACHE_MAX_AGE_MS) {
+      return null;
+    }
+    return cached;
+  } catch {
+    return null;
   }
+}
 
+async function setCachedData(key, data) {
+  try {
+    await chrome.storage.local.set({
+      [key]: {
+        ...data,
+        cachedAt: Date.now()
+      }
+    });
+  } catch {
+    // Önbellek yazma hatası sessizce yoksayılır
+  }
+}
+
+async function handleFetchAssignmentsRequest() {
+  // 1. Önce arka planda doğrudan fetch dene (en hızlı ve kullanıcıya iş çıkarmayan yol)
   const directResult = await (async () => {
     try {
       const payload = await fetchAssignmentsDirectly();
       const normalised = normalisePayload(payload);
       if (normalised.assignments.length) {
+        // Başarılı veriyi önbelleğe al
+        await setCachedData(CACHE_KEY_ASSIGNMENTS, normalised);
         return { ok: true, payload: normalised };
       }
-
-      return {
-        ok: false,
-        error: "Arka plan istegi sifir odev dondurdu."
-      };
+      return { ok: false, error: "Odev bulunamadi." };
     } catch (error) {
       return { ok: false, error: toErrorMessage(error) };
     }
@@ -586,32 +619,91 @@ async function handleFetchAssignmentsRequest() {
     return directResult.payload;
   }
 
-  const reasons = [];
-  if (existingResult.ok && !existingResult.payload.assignments.length) {
-    reasons.push("Mevcut sekmede odev duyurusu bulunamadi.");
-  } else if (existingResult.error && existingResult.code !== "NO_TAB") {
-    reasons.push(`Mevcut sekme: ${existingResult.error}`);
+  // 2. Arka plan başarısız olduysa, mevcut SABIS sekmesinden dene
+  const existingResult = await collectWithExistingTab();
+  if (existingResult.ok && existingResult.payload.assignments.length) {
+    // Başarılı veriyi önbelleğe al
+    await setCachedData(CACHE_KEY_ASSIGNMENTS, existingResult.payload);
+    return existingResult.payload;
   }
 
-  if (directResult.error) {
-    reasons.push(`Arka plan istegi: ${directResult.error}`);
+  // 3. Her iki yöntem de başarısız olduysa, önbellekten dene
+  const cached = await getCachedData(CACHE_KEY_ASSIGNMENTS);
+  if (cached && cached.assignments?.length) {
+    // Önbellekten dönen veriye uyarı ekle
+    cached.fromCache = true;
+    return cached;
   }
 
-  const message =
-    reasons.length > 0
-      ? reasons.join(" | ")
-      : "Odev duyurusu alinamadi. SABIS oturumunuzun acik oldugundan emin olun.";
-
-  throw new Error(message);
+  // 4. Hiçbir kaynak başarılı olmadı
+  throw new Error(
+    "Oturum açık değil. SABİS'e giriş yaptıktan sonra tekrar deneyin."
+  );
 }
 
 async function handleFetchExamsRequest() {
-  const payload = await fetchExamsDirectly();
-  if (payload?.exams?.length) {
-    return payload;
+  // 1. Önce arka planda doğrudan fetch dene
+  try {
+    const payload = await fetchExamsDirectly();
+    if (payload?.exams?.length) {
+      // Başarılı veriyi önbelleğe al
+      await setCachedData(CACHE_KEY_EXAMS, payload);
+      return payload;
+    }
+  } catch (error) {
+    // Hata durumunda önbelleğe geç
   }
 
-  throw new Error("Sinav listesi bos geldi.");
+  // 2. Arka plan başarısız olduysa, önbellekten dene
+  const cached = await getCachedData(CACHE_KEY_EXAMS);
+  if (cached && cached.exams?.length) {
+    cached.fromCache = true;
+    return cached;
+  }
+
+  // 3. Hiçbir kaynak başarılı olmadı
+  throw new Error(
+    "Oturum açık değil. SABİS'e giriş yaptıktan sonra tekrar deneyin."
+  );
+}
+
+// Arka planda sessizce verileri güncelle (hata fırlatmaz)
+async function silentUpdateAssignments() {
+  try {
+    const payload = await fetchAssignmentsDirectly();
+    const normalised = normalisePayload(payload);
+    if (normalised.assignments.length) {
+      await setCachedData(CACHE_KEY_ASSIGNMENTS, normalised);
+      return true;
+    }
+  } catch {
+    // Sessizce başarısız ol
+  }
+  return false;
+}
+
+async function silentUpdateExams() {
+  try {
+    const payload = await fetchExamsDirectly();
+    if (payload?.exams?.length) {
+      await setCachedData(CACHE_KEY_EXAMS, payload);
+      return true;
+    }
+  } catch {
+    // Sessizce başarısız ol
+  }
+  return false;
+}
+
+async function performAutoUpdate() {
+  const assignmentsOk = await silentUpdateAssignments();
+  const examsOk = await silentUpdateExams();
+
+  if (assignmentsOk || examsOk) {
+    await chrome.storage.local.set({
+      [LAST_AUTO_UPDATE_KEY]: new Date().toISOString()
+    });
+  }
 }
 
 function openHomeworkPopup() {
@@ -622,12 +714,77 @@ function openHomeworkPopup() {
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.set({ extensionEnabled: true });
+
+  // Periyodik güncelleme alarmı kur
+  chrome.alarms.create(AUTO_UPDATE_ALARM_NAME, {
+    delayInMinutes: 0.5, // 30 saniye sonra ilk güncelleme
+    periodInMinutes: AUTO_UPDATE_INTERVAL_MINUTES
+  });
+
   if (chrome.contextMenus?.create) {
     chrome.contextMenus.create({
       id: HOMEWORK_MENU_ID,
       title: "Odev Takibi",
       contexts: ["action"]
     });
+  }
+
+  // Kurulum sonrası hemen güncelleme dene
+  performAutoUpdate();
+});
+
+// Tarayıcı başladığında alarmı kontrol et ve güncelleme yap
+chrome.runtime.onStartup?.addListener?.(async () => {
+  const alarm = await chrome.alarms.get(AUTO_UPDATE_ALARM_NAME);
+  if (!alarm) {
+    chrome.alarms.create(AUTO_UPDATE_ALARM_NAME, {
+      delayInMinutes: 0.5,
+      periodInMinutes: AUTO_UPDATE_INTERVAL_MINUTES
+    });
+  }
+  // Başlangıçta bir güncelleme dene
+  performAutoUpdate();
+});
+
+// Service worker her uyandığında alarmı kontrol et
+(async () => {
+  try {
+    const alarm = await chrome.alarms.get(AUTO_UPDATE_ALARM_NAME);
+    if (!alarm) {
+      chrome.alarms.create(AUTO_UPDATE_ALARM_NAME, {
+        delayInMinutes: 0.5,
+        periodInMinutes: AUTO_UPDATE_INTERVAL_MINUTES
+      });
+    }
+  } catch {
+    // Hata olursa sessizce geç
+  }
+})();
+
+// Alarm tetiklendiğinde güncelleme yap
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === AUTO_UPDATE_ALARM_NAME) {
+    performAutoUpdate();
+  }
+});
+
+// SABIS sayfası açıldığında veya güncellendiğinde otomatik veri çek
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  // Sadece sayfa tamamen yüklendiğinde
+  if (changeInfo.status !== "complete") {
+    return;
+  }
+
+  const url = tab.url || "";
+
+  // SABIS ana sayfası veya duyuru sayfası açıldıysa ödevleri güncelle
+  if (url.includes("obs.sabis.sakarya.edu.tr")) {
+    silentUpdateAssignments();
+  }
+
+  // E-sınav sayfası açıldıysa sınavları güncelle
+  if (url.includes("esinav.sabis.sakarya.edu.tr")) {
+    silentUpdateExams();
   }
 });
 
@@ -660,6 +817,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .then((result) => sendResponse({ ok: true, data: result }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;
+  }
+
+  // Content script'ten gelen otomatik güncelleme verilerini önbelleğe al
+  if (message?.type === "AUTO_UPDATE_ASSIGNMENTS" && message.payload) {
+    const payload = message.payload;
+    if (payload.assignments?.length) {
+      const normalised = normalisePayload(payload);
+      setCachedData(CACHE_KEY_ASSIGNMENTS, normalised);
+    }
+    return false; // Yanıt bekleme
   }
 
   return undefined;

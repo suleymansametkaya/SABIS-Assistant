@@ -1,6 +1,6 @@
 (() => {
   if (window.__SABIS_HOMEWORK_ASSISTANT_CONTENT_SCRIPT__) {
-    console.debug("SABIS Homework Assistant content script already active.");
+    console.debug("SABİS Öğrenci Yardımcısı içerik betiği zaten aktif.");
     return;
   }
 
@@ -12,7 +12,7 @@
       ));
     } catch (error) {
       console.error(
-        "SABIS Homework Assistant collector modulu yuklenemedi.",
+        "SABİS Öğrenci Yardımcısı toplayıcı modülü yüklenemedi.",
         error
       );
       return;
@@ -71,6 +71,25 @@
         return true;
       }
     });
+
+    // Sayfa yüklendiğinde otomatik olarak verileri çek ve background'a bildir
+    // Bu sayede kullanıcı SABIS'e her girdiğinde veriler otomatik güncellenir
+    setTimeout(async () => {
+      try {
+        const payload = await collectAssignmentsWithRetries({ timeoutMs: 5000, delayMs: 300 });
+        if (payload?.assignments?.length) {
+          // Background script'e güncel verileri bildir
+          chrome.runtime.sendMessage({
+            type: "AUTO_UPDATE_ASSIGNMENTS",
+            payload
+          }).catch(() => {
+            // Hata olursa sessizce geç
+          });
+        }
+      } catch {
+        // Otomatik güncelleme başarısız olursa sessizce geç
+      }
+    }, 2000); // Sayfa tam yüklendikten 2 saniye sonra çalıştır
   }
 
   init();

@@ -20,11 +20,15 @@ const tabsNav = document.querySelector("#category-tabs");
 const tabButtons = Array.from(document.querySelectorAll("[data-category-tab]"));
 const modeTabs = document.querySelector("#mode-tabs");
 const modeButtons = Array.from(document.querySelectorAll("[data-mode-tab]"));
+const searchInput = document.querySelector("#search-input");
+const sortSelect = document.querySelector("#sort-select");
 const template = document.querySelector("#assignment-template");
 const examTemplate = document.querySelector("#exam-template");
 
 let activeCategory = "dueSoon";
 let activeMode = "assignments";
+let filterText = "";
+let sortOption = "dateAsc";
 
 async function initNoteToggle() {
   if (!noteStatusEl || !noteToggleEl) {
@@ -65,15 +69,72 @@ function formatDate(date) {
 function formatCountdown(diffMs) {
   const diffDays = msToDays(diffMs);
   if (diffDays <= -1) {
-    return "Suresi gecti";
+    return "Süresi geçti";
   }
   if (diffDays < 0) {
-    return "Bugun teslim";
+    return "Bugün teslim";
   }
   if (diffDays < 0.5) {
-    return "Saatler icinde teslim";
+    return "Saatler içinde teslim";
   }
-  return `${Math.ceil(diffDays)} gun kaldi`;
+  return `${Math.ceil(diffDays)} gün kaldı`;
+}
+
+/**
+ * Tarihi Google Calendar URL formatına çevirir: YYYYMMDDTHHmmssZ
+ */
+function formatDateForCalendar(date) {
+  const pad = (n) => String(n).padStart(2, "0");
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  return `${year}${month}${day}T${hours}${minutes}00`;
+}
+
+/**
+ * Ödev için Google Calendar URL'i oluşturur
+ * Teslim saatinden 1 saat önce başlayan etkinlik oluşturur
+ */
+function generateAssignmentCalendarUrl(title, dueTimestamp) {
+  const dueDate = new Date(dueTimestamp);
+
+  // Etkinlik tam teslim saatinde biter (Varsayılan 1 saat süre)
+  const startDate = new Date(dueDate);
+  const endDate = new Date(dueDate);
+  endDate.setHours(dueDate.getHours() + 1);
+
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: `[SABİS] Ödev Teslimi: ${title}`,
+    dates: `${formatDateForCalendar(startDate)}/${formatDateForCalendar(endDate)}`,
+    details: `SABİS Ödev Teslimi\n\nÖdev: ${title}\nTeslim Tarihi: ${formatDate(dueDate)}\n\n⚠️ Tavsiye: Hatırlatıcıyı 1 gün önceye kurunuz!`,
+    location: "SABİS - Sakarya Üniversitesi"
+  });
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+/**
+ * Sınav için Google Calendar URL'i oluşturur (30 dakika önce alarm)
+ */
+function generateExamCalendarUrl(title, dueTimestamp) {
+  const examDate = new Date(dueTimestamp);
+
+  // Sınav süresi: başlangıç - 1 saat sonra
+  const endDate = new Date(examDate);
+  endDate.setHours(examDate.getHours() + 1);
+
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: `[SABİS] Kısa Sınav: ${title}`,
+    dates: `${formatDateForCalendar(examDate)}/${formatDateForCalendar(endDate)}`,
+    details: `SABİS Kısa Sınav\n\nDers: ${title}\nSınav Zamanı: ${formatDate(examDate)}\n\n⚠️ Sınava zamanında katılmayı unutmayın!`,
+    location: "SABİS - Sakarya Üniversitesi"
+  });
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
 async function loadSettings() {
@@ -89,7 +150,16 @@ function categorizeItems(items, settings) {
     overdue: []
   };
 
-  items.forEach((item) => {
+  // 1. Filtreleme (Arama)
+  const filteredItems = items.filter(item => {
+    if (!filterText) return true;
+    const title = (item.title || "").toLocaleLowerCase('tr');
+    const query = filterText.toLocaleLowerCase('tr');
+    return title.includes(query);
+  });
+
+  // 2. Gruplama
+  filteredItems.forEach((item) => {
     if (!item.dueTimestamp) {
       return;
     }
@@ -108,10 +178,43 @@ function categorizeItems(items, settings) {
     }
   });
 
+  // 3. Sıralama
+  const sortFn = (a, b) => {
+    const timeA = a.dueTimestamp ?? Infinity;
+    const timeB = b.dueTimestamp ?? Infinity;
+    const distA = Math.abs(timeA - now);
+    const distB = Math.abs(timeB - now);
+    const titleA = (a.title || "").toLocaleLowerCase('tr');
+    const titleB = (b.title || "").toLocaleLowerCase('tr');
+
+    switch (sortOption) {
+      case "dateAsc": // Tarihe Göre (Yakın)
+        // En küçük mesafe (en yakın) en üstte
+        // Tarihi olmayanlar (Infinity) en sona
+        if (timeA === Infinity) return 1;
+        if (timeB === Infinity) return -1;
+        return distA - distB;
+      case "dateDesc": // Tarihe Göre (Uzak)
+        // En büyük mesafe (en uzak) en üstte
+        // Tarihi olmayanlar en başa mı sona mı? Uzak dediği için en başa mantıklı olabilir ama
+        // genelde "tarihsiz" sona atılır. Biz standart davranalım.
+        if (timeA === Infinity) return 1;
+        if (timeB === Infinity) return -1;
+        return distB - distA;
+      case "nameAsc": // İsme Göre (A-Z)
+        return titleA.localeCompare(titleB);
+      case "nameDesc": // İsme Göre (Z-A)
+        return titleB.localeCompare(titleA);
+      default:
+        // Default Yakın
+        if (timeA === Infinity) return 1;
+        if (timeB === Infinity) return -1;
+        return distA - distB;
+    }
+  };
+
   categoryOrder.forEach((category) => {
-    groups[category].sort(
-      (a, b) => (a.dueTimestamp ?? Infinity) - (b.dueTimestamp ?? Infinity)
-    );
+    groups[category].sort(sortFn);
   });
 
   return groups;
@@ -122,8 +225,9 @@ function createAssignmentElement(assignment) {
   const titleEl = clone.querySelector(".assignment-title");
   const dueLabelEl = clone.querySelector(".due-label");
   const dueCountdownEl = clone.querySelector(".due-countdown");
+  const calendarBtn = clone.querySelector(".calendar-btn");
 
-  titleEl.textContent = assignment.title || "Baslik bulunamadi";
+  titleEl.textContent = assignment.title || "Başlık bulunamadı";
 
   if (assignment.dueTimestamp) {
     const dueDate = new Date(assignment.dueTimestamp);
@@ -131,9 +235,17 @@ function createAssignmentElement(assignment) {
     const diffMs =
       assignment.diffMs ?? assignment.dueTimestamp - Date.now();
     dueCountdownEl.textContent = formatCountdown(diffMs);
+
+    // Takvim butonuna URL ata
+    calendarBtn.href = generateAssignmentCalendarUrl(
+      assignment.title || "Ödev",
+      assignment.dueTimestamp
+    );
   } else {
-    dueLabelEl.textContent = assignment.dueDateText || "Tarih bulunamadi";
+    dueLabelEl.textContent = assignment.dueDateText || "Tarih bulunamadı";
     dueCountdownEl.textContent = "";
+    // Tarih yoksa butonu kaldır
+    calendarBtn.remove();
   }
 
   return clone;
@@ -145,17 +257,26 @@ function createExamElement(exam) {
   const dueLabelEl = clone.querySelector(".due-label");
   const dueCountdownEl = clone.querySelector(".due-countdown");
   const joinButton = clone.querySelector(".exam-join");
+  const calendarBtn = clone.querySelector(".calendar-btn");
 
-  titleEl.textContent = exam.title || "Baslik bulunamadi";
+  titleEl.textContent = exam.title || "Başlık bulunamadı";
 
   if (exam.dueTimestamp) {
     const dueDate = new Date(exam.dueTimestamp);
     dueLabelEl.textContent = formatDate(dueDate);
     const diffMs = exam.diffMs ?? exam.dueTimestamp - Date.now();
     dueCountdownEl.textContent = formatCountdown(diffMs);
+
+    // Takvim butonuna URL ata
+    calendarBtn.href = generateExamCalendarUrl(
+      exam.title || "Sınav",
+      exam.dueTimestamp
+    );
   } else {
-    dueLabelEl.textContent = exam.dateRangeText || "Tarih bulunamadi";
+    dueLabelEl.textContent = exam.dateRangeText || "Tarih bulunamadı";
     dueCountdownEl.textContent = exam.statusText || "";
+    // Tarih yoksa butonu kaldır
+    calendarBtn.remove();
   }
 
   if (exam.joinUrl) {
@@ -325,7 +446,7 @@ function setActiveMode(mode) {
 }
 
 async function fetchAssignments() {
-  setStatus("Veriler toplaniyor...", "info");
+  setStatus("Veriler toplanıyor...", "info");
   toggleMainVisibility(false);
   lastUpdatedEl.textContent = "";
 
@@ -339,10 +460,10 @@ async function fetchAssignments() {
       throw new Error(response?.error || "Bilinmeyen hata");
     }
 
-    const { assignments, collectedAt, sourceUrl } = response.data;
+    const { assignments, collectedAt, sourceUrl, fromCache } = response.data;
     if (!assignments?.length) {
       setStatus(
-        "Odev duyurusu bulunamadi. SABIS duyurularinda yeni icerik olup olmadigini kontrol edin.",
+        "Ödev duyurusu bulunamadı. SABİS duyurularında yeni içerik olup olmadığını kontrol edin.",
         "warning"
       );
       return;
@@ -353,11 +474,17 @@ async function fetchAssignments() {
     ensureActiveCategory(groups);
 
     toggleMainVisibility(true);
-    setStatus(`Toplam ${assignments.length} odev bulundu.`, "success");
+
+    if (fromCache) {
+      setStatus(`Toplam ${assignments.length} ödev (önbellekten). Güncel veri için SABİS'e giriş yapın.`, "warning");
+    } else {
+      setStatus(`Toplam ${assignments.length} ödev bulundu.`, "success");
+    }
 
     if (collectedAt) {
       const collectedDate = new Date(collectedAt);
-      lastUpdatedEl.textContent = `Guncelleme: ${formatDate(collectedDate)}`;
+      const prefix = fromCache ? "Son veri: " : "Güncelleme: ";
+      lastUpdatedEl.textContent = `${prefix}${formatDate(collectedDate)}`;
     }
 
     openSabisLink.href = SABIS_HOME_URL;
@@ -383,10 +510,10 @@ async function fetchExams() {
       throw new Error(response?.error || "Bilinmeyen hata");
     }
 
-    const { exams, collectedAt } = response.data;
+    const { exams, collectedAt, fromCache } = response.data;
     if (!exams?.length) {
       setStatus(
-        "Sınav listesi bulunamadı. SABIS'te aktif dönemin açık olduğundan emin olun.",
+        "Sınav listesi bulunamadı. SABİS'te aktif dönemin açık olduğundan emin olun.",
         "warning"
       );
       return;
@@ -397,11 +524,17 @@ async function fetchExams() {
     ensureActiveCategory(groups);
 
     toggleMainVisibility(true);
-    setStatus(`Toplam ${exams.length} sınav bulundu.`, "success");
+
+    if (fromCache) {
+      setStatus(`Toplam ${exams.length} sınav (önbellekten). Güncel veri için SABİS'e giriş yapın.`, "warning");
+    } else {
+      setStatus(`Toplam ${exams.length} sınav bulundu.`, "success");
+    }
 
     if (collectedAt) {
       const collectedDate = new Date(collectedAt);
-      lastUpdatedEl.textContent = `Guncelleme: ${formatDate(collectedDate)}`;
+      const prefix = fromCache ? "Son veri: " : "Güncelleme: ";
+      lastUpdatedEl.textContent = `${prefix}${formatDate(collectedDate)}`;
     }
 
     openSabisLink.href = SABIS_HOME_URL;
@@ -439,6 +572,23 @@ function initEventListeners() {
       setActiveMode(mode);
     });
   });
+
+  // Arama ve Sıralama Olayları
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      filterText = e.target.value.trim();
+      if (activeMode === "assignments") fetchAssignments();
+      else fetchExams();
+    });
+  }
+
+  if (sortSelect) {
+    sortSelect.addEventListener("change", (e) => {
+      sortOption = e.target.value;
+      if (activeMode === "assignments") fetchAssignments();
+      else fetchExams();
+    });
+  }
 }
 
 async function init() {
